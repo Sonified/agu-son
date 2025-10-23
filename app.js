@@ -1,8 +1,8 @@
 // Agu-Son - Movement Sonification Interactive
-// Version: v1.00
+// Version: v1.01
 
-console.log('🎵 Agu-Son v1.00 - Movement Sonification Interactive');
-console.log('v1.00 Initial commit: Movement sonification interactive with camera-based motion detection and wind chime sounds');
+console.log('🎵 Agu-Son v1.01 - Movement Sonification Interactive');
+console.log('v1.01 Fix: Added 500ms warmup period to prevent initial sound burst on startup');
 console.log('Initialize application');
 
 // Configuration
@@ -12,7 +12,8 @@ const CONFIG = {
     motionThreshold: 20,
     cellDecayRate: 0.95,
     minCellIntensity: 0.1,
-    videoOpacity: 0.3
+    videoOpacity: 0.3,
+    warmupDuration: 500 // milliseconds to ignore sounds on startup
 };
 
 // C Major Scale notes (4 octaves to fill 4x4 grid)
@@ -43,7 +44,8 @@ const state = {
     previousFrame: null,
     cellIntensities: Array(CONFIG.gridSize).fill(0).map(() => Array(CONFIG.gridSize).fill(0)),
     synth: null,
-    initialized: false
+    initialized: false,
+    warmupEndTime: null
 };
 
 // Initialize the application
@@ -161,6 +163,9 @@ async function toggleRunning() {
             // Start Tone.js audio context
             await Tone.start();
             
+            // Set warmup end time to prevent initial "big bang"
+            state.warmupEndTime = Date.now() + CONFIG.warmupDuration;
+            
             // Start the animation loop
             requestAnimationFrame(update);
             
@@ -262,6 +267,11 @@ function triggerCell(row, col, intensity) {
     // Update cell intensity (normalized 0-1)
     const normalizedIntensity = Math.min(intensity / 100, 1);
     state.cellIntensities[row][col] = Math.max(state.cellIntensities[row][col], normalizedIntensity);
+    
+    // Skip playing sound during warmup period to prevent initial "big bang"
+    if (Date.now() < state.warmupEndTime) {
+        return;
+    }
     
     // Play the corresponding note
     // Grid coordinates: bottom-left is (0,0), so we need to flip row
