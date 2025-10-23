@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agu-Son - Movement Sonification</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div id="container">
+        <h1>Agu-Son</h1>
+        <p class="subtitle">Move to create music</p>
+        
+        <div id="canvas-container">
+            <video id="video" autoplay playsinline></video>
+            <canvas id="motion-canvas"></canvas>
+            <canvas id="grid-canvas"></canvas>
+        </div>
+        
+        <div id="controls">
+            <button id="start-btn">Start</button>
+            <div id="settings">
+                <label>
+                    Motion Sensitivity:
+                    <input type="range" id="sensitivity" min="1" max="50" value="20">
+                    <span id="sensitivity-value">20</span>
+                </label>
+                <label>
+                    Grid Opacity:
+                    <input type="range" id="grid-opacity" min="0" max="100" value="80">
+                    <span id="grid-opacity-value">80%</span>
+                </label>
+                <label>
+                    Video Opacity:
+                    <input type="range" id="video-opacity" min="0" max="100" value="30">
+                    <span id="video-opacity-value">30%</span>
+                </label>
+            </div>
+        </div>
+        
+        <div id="status">Click Start to begin</div>
+    </div>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
+
