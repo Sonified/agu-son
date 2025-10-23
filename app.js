@@ -1,8 +1,8 @@
 // Agu-Son - Movement Sonification Interactive
-// Version: v1.01
+// Version: v1.02
 
-console.log('🎵 Agu-Son v1.01 - Movement Sonification Interactive');
-console.log('v1.01 Fix: Added 500ms warmup period to prevent initial sound burst on startup');
+console.log('🎵 Agu-Son v1.02 - Movement Sonification Interactive');
+console.log('v1.02 Enhancement: Increased brightness response and added glow effects for better visual feedback');
 console.log('Initialize application');
 
 // Configuration
@@ -264,8 +264,8 @@ function calculateCellMotion(currentFrame, previousFrame, x, y, size) {
 
 // Trigger a cell (light up and play sound)
 function triggerCell(row, col, intensity) {
-    // Update cell intensity (normalized 0-1)
-    const normalizedIntensity = Math.min(intensity / 100, 1);
+    // Update cell intensity (normalized 0-1, using lower divisor for brighter response)
+    const normalizedIntensity = Math.min(intensity / 40, 1);
     state.cellIntensities[row][col] = Math.max(state.cellIntensities[row][col], normalizedIntensity);
     
     // Skip playing sound during warmup period to prevent initial "big bang"
@@ -316,20 +316,33 @@ function drawGrid() {
             const colorRow = CONFIG.gridSize - 1 - row;
             const color = COLORS[colorRow][col];
             
-            // Draw cell background with intensity-based alpha
-            ctx.fillStyle = hexToRgba(color, intensity * 0.8);
+            // Add glow effect when cells are active
+            if (intensity > 0.1) {
+                ctx.shadowBlur = 30 * intensity;
+                ctx.shadowColor = color;
+            } else {
+                ctx.shadowBlur = 0;
+            }
+            
+            // Draw cell background with intensity-based alpha (increased from 0.8 to full opacity)
+            ctx.fillStyle = hexToRgba(color, intensity);
             ctx.fillRect(x, y, cellSize, cellSize);
             
-            // Draw cell border
-            ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+            // Reset shadow for border
+            ctx.shadowBlur = 0;
+            
+            // Draw cell border (brighter when active)
+            const borderOpacity = 0.3 + (intensity * 0.5);
+            ctx.strokeStyle = `rgba(255, 255, 255, ${borderOpacity})`;
             ctx.lineWidth = 2;
             ctx.strokeRect(x, y, cellSize, cellSize);
             
-            // Draw note label
+            // Draw note label (brighter when active)
             const noteRow = CONFIG.gridSize - 1 - row;
             const note = NOTES[noteRow][col];
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
-            ctx.font = '16px sans-serif';
+            const textOpacity = 0.6 + (intensity * 0.4);
+            ctx.fillStyle = `rgba(255, 255, 255, ${textOpacity})`;
+            ctx.font = 'bold 18px sans-serif';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
             ctx.fillText(note, x + cellSize / 2, y + cellSize / 2);
