@@ -654,8 +654,17 @@ async function toggleRunning() {
         // Trigger shrink animation immediately
         startBtn.classList.add('shrinking');
         
-        // After shrink completes, move and expand
+        // After shrink completes, show the starting message and move button
         setTimeout(() => {
+            // Show starting message after button disappears
+            const startingMessage = document.getElementById('starting-message');
+            startingMessage.classList.add('show');
+            
+            // Remove the message after fadeout completes (2s show + 0.5s fade = 2.5s total)
+            setTimeout(() => {
+                startingMessage.classList.remove('show');
+            }, 2500);
+            
             startBtn.classList.remove('shrinking');
             startBtn.classList.add('moved', 'expanding');
             
