@@ -4,41 +4,185 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Agu-Son - Movement Sonification</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>✨</text></svg>">
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <div id="container">
+    <button id="advanced-toggle">Advanced</button>
+    
+    <div id="sidebar" class="show">
         <h1>Agu-Son</h1>
         <p class="subtitle">Move to create music</p>
         
-        <div id="canvas-container">
-            <video id="video" autoplay playsinline></video>
-            <canvas id="motion-canvas"></canvas>
-            <canvas id="grid-canvas"></canvas>
+        <div id="musical-settings">
+            <h3>Musical Settings</h3>
+            <label>
+                <span>Grid Size:</span>
+                <select id="grid-size">
+                    <option value="4">4x4</option>
+                    <option value="5">5x5</option>
+                    <option value="6">6x6</option>
+                </select>
+            </label>
+            <label>
+                <span>Base Note:</span>
+                <select id="base-note">
+                    <option value="C5">C5</option>
+                    <option value="B4">B4</option>
+                    <option value="A#4">A#4</option>
+                    <option value="A4">A4</option>
+                    <option value="G#4">G#4</option>
+                    <option value="G4">G4</option>
+                    <option value="F#4">F#4</option>
+                    <option value="F4">F4</option>
+                    <option value="E4">E4</option>
+                    <option value="D#4">D#4</option>
+                    <option value="D4">D4</option>
+                    <option value="C#4">C#4</option>
+                    <option value="C4">C4</option>
+                    <option value="B3">B3</option>
+                    <option value="A#3">A#3</option>
+                    <option value="A3">A3</option>
+                    <option value="G#3">G#3</option>
+                    <option value="G3">G3</option>
+                    <option value="F#3">F3</option>
+                    <option value="F3">F3</option>
+                    <option value="E3">E3</option>
+                    <option value="D#3">D#3</option>
+                    <option value="D3">D3</option>
+                    <option value="C#3">C#3</option>
+                    <option value="C3" selected>C3</option>
+                    <option value="B2">B2</option>
+                    <option value="A#2">A#2</option>
+                    <option value="A2">A2</option>
+                    <option value="G#2">G#2</option>
+                    <option value="G2">G2</option>
+                    <option value="F#2">F2</option>
+                    <option value="F2">F2</option>
+                    <option value="E2">E2</option>
+                    <option value="D#2">D#2</option>
+                    <option value="D2">D2</option>
+                    <option value="C#2">C#2</option>
+                    <option value="C2">C2</option>
+                    <option value="B1">B1</option>
+                    <option value="A#1">A#1</option>
+                    <option value="A1">A1</option>
+                    <option value="G#1">G#1</option>
+                    <option value="G1">G1</option>
+                    <option value="F#1">F1</option>
+                    <option value="F1">F1</option>
+                    <option value="E1">E1</option>
+                    <option value="D#1">D1</option>
+                    <option value="D1">D1</option>
+                    <option value="C#1">C#1</option>
+                    <option value="C1">C1</option>
+                </select>
+            </label>
+            <label>
+                <span>Scale Mode:</span>
+                <select id="scale-mode">
+                    <option value="major" selected>Major (Ionian)</option>
+                    <option value="minor">Minor (Aeolian)</option>
+                    <option value="dorian">Dorian</option>
+                    <option value="phrygian">Phrygian</option>
+                    <option value="lydian">Lydian</option>
+                    <option value="mixolydian">Mixolydian</option>
+                    <option value="locrian">Locrian</option>
+                    <option value="harmonicMinor">Harmonic Minor</option>
+                    <option value="melodicMinor">Melodic Minor</option>
+                    <option value="pentatonic">Pentatonic Major</option>
+                    <option value="pentatonicMinor">Pentatonic Minor</option>
+                    <option value="blues">Blues</option>
+                    <option value="chromatic">Chromatic</option>
+                </select>
+            </label>
+            <label>
+                <span>Instrument:</span>
+                <select id="instrument">
+                    <option value="windChime" selected>Wind Chime</option>
+                    <option value="marimba">Marimba</option>
+                    <option value="musicBox">Music Box</option>
+                    <option value="piano">Piano</option>
+                    <option value="xylophone">Xylophone</option>
+                    <option value="handBell">Hand Bell</option>
+                    <option value="celeste">Celeste</option>
+                    <option value="glockenspiel">Glockenspiel</option>
+                    <option value="kalimba">Kalimba</option>
+                    <option value="steelDrum">Steel Drum</option>
+                </select>
+            </label>
+            <button id="trigger-mode-btn" class="single-mode">Individual Trigger Active</button>
+            <label>
+                <span>Note Repeat Rate:</span>
+                <input type="range" id="note-repeat-rate" min="50" max="1000" value="100" disabled>
+                <span id="note-repeat-rate-value">100ms</span>
+            </label>
+            <h4>Note Properties</h4>
+            <label>
+                <span>Attack Time:</span>
+                <input type="range" id="attack-time" min="0" max="100" value="44">
+                <span id="attack-time-value">15ms</span>
+            </label>
+            <label>
+                <span>Release Time:</span>
+                <input type="range" id="note-release" min="10" max="1000" value="300">
+                <span id="note-release-value">300ms</span>
+            </label>
+            <label>
+                <span>Stereo Width (panning):</span>
+                <input type="range" id="stereo-width" min="0" max="100" value="50">
+                <span id="stereo-width-value">50%</span>
+            </label>
+            <h4>Reverb</h4>
+            <label>
+                <span>Reverb Tail Length:</span>
+                <input type="range" id="reverb-decay" min="1" max="50" value="40">
+                <span id="reverb-decay-value">4.0s</span>
+            </label>
+            <label>
+                <span>Reverb Dry/Wet:</span>
+                <input type="range" id="reverb-wet" min="0" max="100" value="40">
+                <span id="reverb-wet-value">40%</span>
+            </label>
+            <label>
+                <span>Audio Latency:</span>
+                <select id="audio-latency">
+                    <option value="interactive" selected>Interactive (Lowest, ~5ms)</option>
+                    <option value="balanced">Balanced (~20ms)</option>
+                    <option value="playback">Playback (Highest, ~100ms)</option>
+                </select>
+            </label>
+            <button id="compression-toggle" class="compression-on">Compression: ON</button>
+            <button id="release-all-btn" style="background: linear-gradient(135deg, #FF5722 0%, #D32F2F 100%);">Release All Notes</button>
         </div>
-        
-        <div id="controls">
-            <button id="start-btn">Start</button>
-            <div id="settings">
-                <label>
-                    Motion Sensitivity:
-                    <input type="range" id="sensitivity" min="1" max="50" value="20">
-                    <span id="sensitivity-value">20</span>
-                </label>
-                <label>
-                    Grid Opacity:
-                    <input type="range" id="grid-opacity" min="0" max="100" value="80">
-                    <span id="grid-opacity-value">80%</span>
-                </label>
-                <label>
-                    Video Opacity:
-                    <input type="range" id="video-opacity" min="0" max="100" value="30">
-                    <span id="video-opacity-value">30%</span>
-                </label>
-            </div>
+
+        <div id="video-settings">
+            <h3>Video Settings</h3>
+            <label>
+                <span>Motion Sensitivity:</span>
+                <input type="range" id="sensitivity" min="1" max="50" value="20">
+                <span id="sensitivity-value">20</span>
+            </label>
+            <label>
+                <span>Grid Opacity:</span>
+                <input type="range" id="grid-opacity" min="0" max="100" value="80">
+                <span id="grid-opacity-value">80%</span>
+            </label>
+            <label>
+                <span>Video Opacity:</span>
+                <input type="range" id="video-opacity" min="0" max="100" value="30">
+                <span id="video-opacity-value">30%</span>
+            </label>
         </div>
         
         <div id="status">Click Start to begin</div>
+    </div>
+    
+    <div id="canvas-container">
+        <button id="start-btn">Start</button>
+        <video id="video" autoplay playsinline></video>
+        <canvas id="motion-canvas"></canvas>
+        <canvas id="grid-canvas"></canvas>
     </div>
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
