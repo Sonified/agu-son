@@ -1038,8 +1038,21 @@ const recordingState = {
     fadeInDuration: 200, // ms
     fadeOutDuration: 200, // ms
     isGoogleInitialized: false,
-    accessToken: null
+    accessToken: null,
+    aguLogo: null,
+    geosonnetLogo: null // Placeholder for when you add it
 };
+
+// Preload logos
+function preloadLogos() {
+    // Load AGU 2025 logo
+    recordingState.aguLogo = new Image();
+    recordingState.aguLogo.src = 'AGU25_Full_Event_Logo_WHITE.png';
+
+    // Load Geo SonNet logo (WebP works great with canvas!)
+    recordingState.geosonnetLogo = new Image();
+    recordingState.geosonnetLogo.src = 'GeoSonNetLogocolor-2-e1731008087286.webp';
+}
 
 // Initialize Google API
 function initGoogleAPI() {
@@ -1126,13 +1139,25 @@ function createSocialMediaCanvas(sourceCanvas) {
     finalCtx.font = 'bold 48px sans-serif';
     finalCtx.fillText('Check out geosonnet.org', finalCanvas.width / 2, bottomBannerY + bottomBannerHeight / 2);
 
-    // TODO: Add logos here when provided
-    // Top banner: Add logos on left/right of text or above text
-    // Bottom banner: Add logos if needed
-    // Example:
-    // const logo = new Image();
-    // logo.src = 'geosonnet-logo.png';
-    // finalCtx.drawImage(logo, x, y, width, height);
+    // Add Geo SonNet logo to top banner if loaded
+    if (recordingState.geosonnetLogo && recordingState.geosonnetLogo.complete) {
+        finalCtx.shadowBlur = 0; // Remove shadow for logo
+        const logoHeight = 150;
+        const logoWidth = (recordingState.geosonnetLogo.width / recordingState.geosonnetLogo.height) * logoHeight;
+        const logoX = (finalCanvas.width - logoWidth) / 2;
+        const logoY = 250; // Below the text in top banner
+        finalCtx.drawImage(recordingState.geosonnetLogo, logoX, logoY, logoWidth, logoHeight);
+    }
+
+    // Add AGU 2025 logo to bottom banner if loaded
+    if (recordingState.aguLogo && recordingState.aguLogo.complete) {
+        finalCtx.shadowBlur = 0; // Remove shadow for logo
+        const logoHeight = 120;
+        const logoWidth = (recordingState.aguLogo.width / recordingState.aguLogo.height) * logoHeight;
+        const logoX = (finalCanvas.width - logoWidth) / 2;
+        const logoY = bottomBannerY + bottomBannerHeight - logoHeight - 40; // 40px padding from bottom
+        finalCtx.drawImage(recordingState.aguLogo, logoX, logoY, logoWidth, logoHeight);
+    }
 
     return finalCanvas;
 }
@@ -1392,11 +1417,12 @@ function setupRecordingControls() {
         modal.classList.remove('show');
     });
 
-    // Initialize Google API when page loads
+    // Initialize Google API and preload logos when page loads
     window.addEventListener('load', () => {
         initGoogleAPI().catch(err => {
             console.warn('Google API initialization failed:', err);
         });
+        preloadLogos();
     });
 }
 
