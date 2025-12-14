@@ -1060,15 +1060,14 @@ async function loadFFmpeg() {
 
         recordingState.ffmpeg = new FFmpeg();
 
-        // Load FFmpeg core - use direct URLs (works on localhost)
-        const baseURL = 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/esm';
+        // Load single-threaded FFmpeg core (works on localhost without CORS issues!)
+        const baseURL = 'https://unpkg.com/@ffmpeg/core-st@0.12.6/dist/umd';
         await recordingState.ffmpeg.load({
-            coreURL: `${baseURL}/ffmpeg-core.js`,
-            wasmURL: `${baseURL}/ffmpeg-core.wasm`
+            coreURL: `${baseURL}/ffmpeg-core.js`
         });
 
         recordingState.ffmpegLoaded = true;
-        console.log('✓ FFmpeg loaded (MP4 conversion ready - will convert AFTER recording stops)');
+        console.log('✓ FFmpeg loaded (single-threaded, works on localhost + production)');
     } catch (error) {
         console.error('Failed to load FFmpeg:', error);
         console.warn('⚠ FFmpeg unavailable - will fall back to WebM download');
