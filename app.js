@@ -1018,12 +1018,11 @@ function hexToRgba(hex, alpha) {
 // VIDEO RECORDING MODULE
 // ============================================================================
 
-// Google Drive API Configuration
-const GOOGLE_CONFIG = {
-    clientId: 'YOUR_CLIENT_ID_HERE.apps.googleusercontent.com', // Replace with your actual client ID
-    apiKey: 'YOUR_API_KEY_HERE', // Replace with your actual API key
-    discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'],
-    scopes: 'https://www.googleapis.com/auth/drive.file'
+// Cloudflare Worker Configuration
+const UPLOAD_CONFIG = {
+    workerUrl: 'https://YOUR-WORKER.YOUR-SUBDOMAIN.workers.dev', // Replace with your Cloudflare Worker URL
+    // Or use a custom domain:
+    // workerUrl: 'https://upload.geosonnet.org'
 };
 
 // Recording state
@@ -1037,10 +1036,8 @@ const recordingState = {
     startTime: null,
     fadeInDuration: 200, // ms
     fadeOutDuration: 200, // ms
-    isGoogleInitialized: false,
-    accessToken: null,
     aguLogo: null,
-    geosonnetLogo: null // Placeholder for when you add it
+    geosonnetLogo: null
 };
 
 // Preload logos
@@ -1054,46 +1051,7 @@ function preloadLogos() {
     recordingState.geosonnetLogo.src = 'GeoSonNetLogocolor-2-e1731008087286.webp';
 }
 
-// Initialize Google API
-function initGoogleAPI() {
-    return new Promise((resolve, reject) => {
-        if (recordingState.isGoogleInitialized) {
-            resolve();
-            return;
-        }
-
-        gapi.load('client', async () => {
-            try {
-                await gapi.client.init({
-                    apiKey: GOOGLE_CONFIG.apiKey,
-                    discoveryDocs: GOOGLE_CONFIG.discoveryDocs
-                });
-                recordingState.isGoogleInitialized = true;
-                console.log('✓ Google API initialized');
-                resolve();
-            } catch (error) {
-                console.error('Error initializing Google API:', error);
-                reject(error);
-            }
-        });
-    });
-}
-
-// Handle Google Sign-In
-function handleGoogleSignIn() {
-    const client = google.accounts.oauth2.initTokenClient({
-        client_id: GOOGLE_CONFIG.clientId,
-        scope: GOOGLE_CONFIG.scopes,
-        callback: (response) => {
-            if (response.access_token) {
-                recordingState.accessToken = response.access_token;
-                gapi.client.setToken({ access_token: response.access_token });
-                console.log('✓ Google Drive connected');
-            }
-        }
-    });
-    client.requestAccessToken();
-}
+// No initialization needed for Cloudflare Worker upload! 🎉
 
 // Create social media ready canvas with overlay
 function createSocialMediaCanvas(sourceCanvas) {
@@ -1299,46 +1257,27 @@ async function handleRecordingStop() {
     recordBtn.classList.remove('recording');
     recordBtn.querySelector('.record-text').textContent = 'Record';
 
-    // Upload to Google Drive
-    await uploadToGoogleDrive(blob);
+    // Upload to Cloudflare Worker
+    await uploadToCloudflare(blob);
 }
 
-// Upload video to Google Drive
-async function uploadToGoogleDrive(videoBlob) {
+// Upload video to Cloudflare Worker (SO MUCH SIMPLER! 🎉)
+async function uploadToCloudflare(videoBlob) {
     try {
         // Show modal with upload status
         const modal = document.getElementById('qr-modal');
         modal.classList.add('show');
-        document.getElementById('upload-status').textContent = 'Uploading to Google Drive...';
+        document.getElementById('upload-status').textContent = 'Uploading video...';
         document.getElementById('qr-code').innerHTML = '';
         document.getElementById('direct-link').style.display = 'none';
 
-        // Check if we have access token, if not, request sign-in
-        if (!recordingState.accessToken) {
-            document.getElementById('upload-status').textContent = 'Please sign in to Google Drive...';
-            handleGoogleSignIn();
-            // Wait for sign-in (this is async, so we'll need to retry or show a message)
-            setTimeout(() => uploadToGoogleDrive(videoBlob), 2000);
-            return;
-        }
-
-        // Create file metadata
-        const metadata = {
-            name: `GeoSonNet_${Date.now()}.webm`,
-            mimeType: 'video/webm'
-        };
-
         // Create form data
         const formData = new FormData();
-        formData.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
-        formData.append('file', videoBlob);
+        formData.append('video', videoBlob, `geosonnet_${Date.now()}.webm`);
 
-        // Upload to Google Drive
-        const response = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
+        // Upload to Cloudflare Worker
+        const response = await fetch(UPLOAD_CONFIG.workerUrl, {
             method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${recordingState.accessToken}`
-            },
             body: formData
         });
 
@@ -1346,42 +1285,31 @@ async function uploadToGoogleDrive(videoBlob) {
             throw new Error('Upload failed');
         }
 
-        const file = await response.json();
-        console.log('✓ File uploaded:', file.id);
+        const result = await response.json();
 
-        // Make file publicly accessible
-        await fetch(`https://www.googleapis.com/drive/v3/files/${file.id}/permissions`, {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${recordingState.accessToken}`,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                role: 'reader',
-                type: 'anyone'
-            })
-        });
+        if (!result.success) {
+            throw new Error(result.error || 'Upload failed');
+        }
 
-        // Generate shareable link
-        const shareableLink = `https://drive.google.com/file/d/${file.id}/view`;
+        console.log('✓ File uploaded:', result.filename);
 
-        // Generate QR code
+        // Generate QR code with the video URL
         document.getElementById('upload-status').textContent = 'Upload complete! 🎉';
         document.getElementById('qr-code').innerHTML = '';
         new QRCode(document.getElementById('qr-code'), {
-            text: shareableLink,
+            text: result.url,
             width: 256,
             height: 256
         });
 
         // Show direct link
         const directLink = document.getElementById('direct-link');
-        directLink.href = shareableLink;
+        directLink.href = result.url;
         directLink.style.display = 'block';
 
         console.log('✓ QR code generated');
     } catch (error) {
-        console.error('Error uploading to Google Drive:', error);
+        console.error('Error uploading video:', error);
         document.getElementById('upload-status').textContent = '❌ Upload failed. Please try again.';
 
         // Fallback: offer local download
@@ -1417,11 +1345,8 @@ function setupRecordingControls() {
         modal.classList.remove('show');
     });
 
-    // Initialize Google API and preload logos when page loads
+    // Preload logos when page loads
     window.addEventListener('load', () => {
-        initGoogleAPI().catch(err => {
-            console.warn('Google API initialization failed:', err);
-        });
         preloadLogos();
     });
 }
