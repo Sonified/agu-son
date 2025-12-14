@@ -1069,9 +1069,10 @@ async function loadFFmpeg() {
         });
 
         recordingState.ffmpegLoaded = true;
-        console.log('✓ FFmpeg loaded (client-side MP4 conversion ready)');
+        console.log('✓ FFmpeg loaded (MP4 conversion ready - will convert AFTER recording stops)');
     } catch (error) {
-        console.error('Failed to load FFmpeg:', error);
+        console.warn('⚠ FFmpeg failed to load (CORS on localhost). Will work when deployed!');
+        console.error(error);
     }
 }
 
@@ -1338,11 +1339,27 @@ async function handleRecordingStop() {
         // Create WebM blob from recorded chunks
         const webmBlob = new Blob(recordingState.recordedChunks, { type: 'video/webm' });
 
-        // Convert to MP4 with H.264 (FREE client-side conversion!)
-        const mp4Blob = await convertToMP4(webmBlob);
+        if (recordingState.ffmpegLoaded) {
+            // Convert to MP4 with H.264 (FREE client-side conversion!)
+            const mp4Blob = await convertToMP4(webmBlob);
+            // Upload MP4 to Cloudflare Worker
+            await uploadToCloudflare(mp4Blob);
+        } else {
+            // FFmpeg not loaded (localhost CORS issue) - offer WebM download
+            console.warn('⚠ FFmpeg not available - offering WebM download instead');
+            document.getElementById('upload-status').textContent = 'FFmpeg not loaded (works when deployed). Downloading WebM...';
 
-        // Upload MP4 to Cloudflare Worker
-        await uploadToCloudflare(mp4Blob);
+            const url = URL.createObjectURL(webmBlob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `GeoSonNet_${Date.now()}.webm`;
+            a.click();
+
+            setTimeout(() => {
+                const modal = document.getElementById('qr-modal');
+                modal.classList.remove('show');
+            }, 2000);
+        }
     } catch (error) {
         console.error('Error processing video:', error);
         document.getElementById('upload-status').textContent = '❌ Conversion failed. Please try again.';
