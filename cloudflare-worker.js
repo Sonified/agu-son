@@ -196,7 +196,7 @@ export default {
         <div class="button-group">
             <button class="share-btn" id="share-btn">
                 <span>📱</span>
-                <span>Share to Instagram/TikTok</span>
+                <span>Share this video!</span>
             </button>
 
             <a href="/download/${filename}" class="download-btn">
