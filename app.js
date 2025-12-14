@@ -1124,13 +1124,12 @@ function createSocialMediaCanvas(sourceCanvas) {
     return finalCanvas;
 }
 
-// Draw recording frame with fade effect
+// Draw recording frame
 function drawRecordingFrame() {
     if (!recordingState.isRecording) return;
 
     const ctx = recordingState.recordingCtx;
     const canvas = recordingState.recordingCanvas;
-    const elapsed = Date.now() - recordingState.startTime;
 
     // Clear canvas
     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -1138,17 +1137,8 @@ function drawRecordingFrame() {
     // Create social media overlay canvas
     const socialCanvas = createSocialMediaCanvas(state.gridCanvas);
 
-    // Calculate fade opacity
-    let opacity = 1;
-    if (elapsed < recordingState.fadeInDuration) {
-        // Fade in
-        opacity = elapsed / recordingState.fadeInDuration;
-    }
-
-    // Draw with opacity
-    ctx.globalAlpha = opacity;
+    // Draw it
     ctx.drawImage(socialCanvas, 0, 0);
-    ctx.globalAlpha = 1;
 
     // Continue animation
     recordingState.animationFrameId = requestAnimationFrame(drawRecordingFrame);
@@ -1214,40 +1204,20 @@ async function startRecording() {
     }
 }
 
-// Apply fade out and stop recording
+// Stop recording
 async function stopRecording() {
     return new Promise((resolve) => {
-        const fadeOutStart = Date.now();
-        const fadeOutDuration = recordingState.fadeOutDuration;
-
-        // Animate fade out
-        function fadeOut() {
-            const elapsed = Date.now() - fadeOutStart;
-            const opacity = 1 - (elapsed / fadeOutDuration);
-
-            if (opacity > 0) {
-                recordingState.recordingCtx.clearRect(0, 0, recordingState.recordingCanvas.width, recordingState.recordingCanvas.height);
-                const socialCanvas = createSocialMediaCanvas(state.gridCanvas);
-                recordingState.recordingCtx.globalAlpha = opacity;
-                recordingState.recordingCtx.drawImage(socialCanvas, 0, 0);
-                recordingState.recordingCtx.globalAlpha = 1;
-                requestAnimationFrame(fadeOut);
-            } else {
-                // Fade complete - wait a bit for canvas stream to capture final frames
-                setTimeout(() => {
-                    recordingState.isRecording = false;
-                    if (recordingState.animationFrameId) {
-                        cancelAnimationFrame(recordingState.animationFrameId);
-                    }
-                    if (recordingState.mediaRecorder && recordingState.mediaRecorder.state !== 'inactive') {
-                        recordingState.mediaRecorder.stop();
-                    }
-                    resolve();
-                }, 100); // Give canvas stream 100ms to capture fade-out frames
+        // Wait a bit for canvas stream to capture final frames
+        setTimeout(() => {
+            recordingState.isRecording = false;
+            if (recordingState.animationFrameId) {
+                cancelAnimationFrame(recordingState.animationFrameId);
             }
-        }
-
-        fadeOut();
+            if (recordingState.mediaRecorder && recordingState.mediaRecorder.state !== 'inactive') {
+                recordingState.mediaRecorder.stop();
+            }
+            resolve();
+        }, 100); // Give canvas stream 100ms to capture final frames
     });
 }
 
@@ -1299,19 +1269,25 @@ async function uploadToCloudflare(videoBlob) {
 
         console.log('✓ File uploaded:', result.filename);
 
-        // Generate QR code with the video URL
-        document.getElementById('upload-status').textContent = 'Upload complete! 🎉';
+        // Generate landing page URL for mobile sharing
+        const workerUrl = new URL(result.url).origin;
+        const landingPageUrl = `${workerUrl}/video/${result.filename}`;
+
+        document.getElementById('upload-status').textContent = 'Your recording is ready to share 🎉';
         document.getElementById('qr-code').innerHTML = '';
         new QRCode(document.getElementById('qr-code'), {
-            text: result.url,
+            text: landingPageUrl,
             width: 256,
             height: 256
         });
 
-        // Show direct link
+        // Show direct link to landing page
         const directLink = document.getElementById('direct-link');
-        directLink.href = result.url;
+        directLink.href = landingPageUrl;
         directLink.style.display = 'block';
+
+        // Setup desktop share buttons
+        setupDesktopShareButtons(result.url, landingPageUrl);
 
         console.log('✓ QR code generated');
     } catch (error) {
@@ -1331,6 +1307,32 @@ async function uploadToCloudflare(videoBlob) {
             a.click();
         });
     }
+}
+
+// Setup desktop share buttons
+function setupDesktopShareButtons(videoUrl, landingPageUrl) {
+    const shareButtons = document.getElementById('share-buttons');
+    shareButtons.innerHTML = '';
+    shareButtons.style.display = 'flex';
+
+    const platforms = [
+        { name: 'Facebook', icon: '📘', url: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(landingPageUrl)}` },
+        { name: 'X (Twitter)', icon: '✖️', url: `https://twitter.com/intent/tweet?url=${encodeURIComponent(landingPageUrl)}&text=Check%20out%20my%20movement%20sonification%20from%20AGU%202025!` },
+        { name: 'LinkedIn', icon: '💼', url: `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(landingPageUrl)}` },
+        { name: 'Download', icon: '⬇️', url: videoUrl, download: true }
+    ];
+
+    platforms.forEach(platform => {
+        const btn = document.createElement('a');
+        btn.href = platform.url;
+        btn.target = '_blank';
+        btn.className = 'share-platform-btn';
+        if (platform.download) {
+            btn.download = `GeoSonNet_${Date.now()}.webm`;
+        }
+        btn.innerHTML = `${platform.icon} ${platform.name}`;
+        shareButtons.appendChild(btn);
+    });
 }
 
 // Setup recording controls
