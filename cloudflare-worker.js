@@ -24,9 +24,11 @@ export default {
           return new Response('No video file provided', { status: 400 });
         }
 
-        // Generate unique filename
+        // Get filename from uploaded file (preserves .mp4 or .webm extension)
+        const originalFilename = videoFile.name;
+        const extension = originalFilename.split('.').pop();
         const timestamp = Date.now();
-        const filename = `geosonnet_${timestamp}.webm`;
+        const filename = `geosonnet_${timestamp}.${extension}`;
 
         // Store in R2 (Cloudflare Object Storage)
         // You'll need to bind an R2 bucket named 'VIDEOS' in wrangler.toml
@@ -73,9 +75,12 @@ export default {
           return new Response('Video not found', { status: 404 });
         }
 
+        // Determine content type based on file extension
+        const contentType = filename.endsWith('.mp4') ? 'video/mp4' : 'video/webm';
+
         return new Response(object.body, {
           headers: {
-            'Content-Type': 'video/webm',
+            'Content-Type': contentType,
             'Access-Control-Allow-Origin': '*',
           },
         });

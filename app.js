@@ -1035,7 +1035,9 @@ const recordingState = {
     fadeInDuration: 200, // ms
     fadeOutDuration: 200, // ms
     aguLogo: null,
-    geosonnetLogo: null
+    geosonnetLogo: null,
+    ffmpeg: null,
+    ffmpegLoaded: false
 };
 
 // Preload logos
@@ -1049,7 +1051,73 @@ function preloadLogos() {
     recordingState.geosonnetLogo.src = 'GeoSonNetLogocolor-2-e1731008087286.webp';
 }
 
-// No initialization needed for Cloudflare Worker upload! 🎉
+// Initialize FFmpeg for client-side WebM → MP4 (H.264) conversion
+async function loadFFmpeg() {
+    if (recordingState.ffmpegLoaded) return;
+
+    try {
+        const { FFmpeg } = FFmpegWASM;
+        const { toBlobURL } = FFmpegUtil;
+
+        recordingState.ffmpeg = new FFmpeg();
+
+        // Load FFmpeg core
+        const baseURL = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.4/dist/umd';
+        await recordingState.ffmpeg.load({
+            coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript'),
+            wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm')
+        });
+
+        recordingState.ffmpegLoaded = true;
+        console.log('✓ FFmpeg loaded (client-side MP4 conversion ready)');
+    } catch (error) {
+        console.error('Failed to load FFmpeg:', error);
+    }
+}
+
+// Convert WebM to MP4 with H.264 encoding (runs in browser, FREE!)
+async function convertToMP4(webmBlob) {
+    try {
+        if (!recordingState.ffmpegLoaded) {
+            await loadFFmpeg();
+        }
+
+        const { fetchFile } = FFmpegUtil;
+        const ffmpeg = recordingState.ffmpeg;
+
+        // Write input file
+        await ffmpeg.writeFile('input.webm', await fetchFile(webmBlob));
+
+        // Convert to MP4 with H.264 encoding
+        // -c:v libx264 = H.264 video codec
+        // -preset fast = faster encoding
+        // -crf 23 = good quality (lower = better quality, 18-28 range)
+        // -c:a aac = AAC audio codec for MP4
+        await ffmpeg.exec([
+            '-i', 'input.webm',
+            '-c:v', 'libx264',
+            '-preset', 'fast',
+            '-crf', '23',
+            '-c:a', 'aac',
+            '-b:a', '128k',
+            'output.mp4'
+        ]);
+
+        // Read the output file
+        const data = await ffmpeg.readFile('output.mp4');
+        const mp4Blob = new Blob([data.buffer], { type: 'video/mp4' });
+
+        // Cleanup
+        await ffmpeg.deleteFile('input.webm');
+        await ffmpeg.deleteFile('output.mp4');
+
+        console.log('✓ Converted WebM to MP4 (H.264)');
+        return mp4Blob;
+    } catch (error) {
+        console.error('MP4 conversion failed:', error);
+        throw error;
+    }
+}
 
 // Create social media ready canvas with overlay
 function createSocialMediaCanvas(sourceCanvas) {
@@ -1177,14 +1245,15 @@ async function startRecording() {
             ...destination.stream.getAudioTracks()
         ]);
 
-        // Create MediaRecorder
-        const options = {
-            mimeType: 'video/webm;codecs=vp9',
-            videoBitsPerSecond: 5000000 // 5 Mbps for good quality
-        };
+        // Record as WebM, then convert to MP4 (H.264) client-side
+        const options = MediaRecorder.isTypeSupported('video/webm;codecs=vp9')
+            ? { mimeType: 'video/webm;codecs=vp9', videoBitsPerSecond: 5000000 }
+            : { videoBitsPerSecond: 5000000 };
 
         recordingState.mediaRecorder = new MediaRecorder(combinedStream, options);
         recordingState.recordedChunks = [];
+
+        console.log('✓ Recording started (will convert to MP4/H.264 when stopped)');
 
         recordingState.mediaRecorder.ondataavailable = (event) => {
             if (event.data.size > 0) {
@@ -1206,8 +1275,6 @@ async function startRecording() {
         const recordBtn = document.getElementById('record-btn');
         recordBtn.classList.add('recording');
         recordBtn.querySelector('.record-text').textContent = 'Stop Recording';
-
-        console.log('✓ Recording started');
     } catch (error) {
         console.error('Error starting recording:', error);
         alert('Failed to start recording. Please try again.');
@@ -1255,31 +1322,42 @@ async function stopRecording() {
 async function handleRecordingStop() {
     console.log('✓ Recording stopped, processing video...');
 
-    // Create blob from recorded chunks
-    const blob = new Blob(recordingState.recordedChunks, { type: 'video/webm' });
-
     // Update UI
     const recordBtn = document.getElementById('record-btn');
     recordBtn.classList.remove('recording');
     recordBtn.querySelector('.record-text').textContent = 'Record';
 
-    // Upload to Cloudflare Worker
-    await uploadToCloudflare(blob);
+    // Show modal early with conversion status
+    const modal = document.getElementById('qr-modal');
+    modal.classList.add('show');
+    document.getElementById('upload-status').textContent = 'Converting to MP4 (H.264)...';
+    document.getElementById('qr-code').innerHTML = '';
+    document.getElementById('direct-link').style.display = 'none';
+
+    try {
+        // Create WebM blob from recorded chunks
+        const webmBlob = new Blob(recordingState.recordedChunks, { type: 'video/webm' });
+
+        // Convert to MP4 with H.264 (FREE client-side conversion!)
+        const mp4Blob = await convertToMP4(webmBlob);
+
+        // Upload MP4 to Cloudflare Worker
+        await uploadToCloudflare(mp4Blob);
+    } catch (error) {
+        console.error('Error processing video:', error);
+        document.getElementById('upload-status').textContent = '❌ Conversion failed. Please try again.';
+    }
 }
 
 // Upload video to Cloudflare Worker (SO MUCH SIMPLER! 🎉)
 async function uploadToCloudflare(videoBlob) {
     try {
-        // Show modal with upload status
-        const modal = document.getElementById('qr-modal');
-        modal.classList.add('show');
-        document.getElementById('upload-status').textContent = 'Uploading video...';
-        document.getElementById('qr-code').innerHTML = '';
-        document.getElementById('direct-link').style.display = 'none';
+        // Update status to uploading
+        document.getElementById('upload-status').textContent = 'Uploading MP4...';
 
-        // Create form data
+        // Create form data - always MP4 now!
         const formData = new FormData();
-        formData.append('video', videoBlob, `geosonnet_${Date.now()}.webm`);
+        formData.append('video', videoBlob, `geosonnet_${Date.now()}.mp4`);
 
         // Upload to Cloudflare Worker
         const response = await fetch(UPLOAD_CONFIG.workerUrl, {
@@ -1351,9 +1429,11 @@ function setupRecordingControls() {
         modal.classList.remove('show');
     });
 
-    // Preload logos when page loads
-    window.addEventListener('load', () => {
+    // Preload logos and FFmpeg when page loads
+    window.addEventListener('load', async () => {
         preloadLogos();
+        // Load FFmpeg in background so it's ready when user stops recording
+        loadFFmpeg();
     });
 }
 
