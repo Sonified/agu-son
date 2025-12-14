@@ -1172,10 +1172,22 @@ async function startRecording() {
         // Get canvas stream after sync buffer
         const canvasStream = recordingState.recordingCanvas.captureStream(30); // 30 fps
 
-        // Get audio from Tone.js destination
+        // Get audio from Tone.js destination with fade in
         const audioContext = Tone.context;
         const destination = audioContext.createMediaStreamDestination();
-        Tone.Destination.connect(destination);
+
+        // Create gain node for fade in/out
+        const fadeGain = audioContext.createGain();
+        fadeGain.gain.setValueAtTime(0, audioContext.currentTime); // Start at 0
+        fadeGain.gain.linearRampToValueAtTime(1, audioContext.currentTime + 0.05); // Fade in over 50ms
+
+        // Connect: Tone.Destination -> fadeGain -> destination
+        Tone.Destination.connect(fadeGain);
+        fadeGain.connect(destination);
+
+        // Store for fade out later
+        recordingState.fadeGain = fadeGain;
+        recordingState.audioDestination = destination;
 
         // Combine video and audio streams
         const combinedStream = new MediaStream([
@@ -1230,7 +1242,14 @@ async function startRecording() {
 // Stop recording
 async function stopRecording() {
     return new Promise((resolve) => {
-        // Wait a bit for canvas stream to capture final frames
+        // Fade out audio over 50ms
+        if (recordingState.fadeGain) {
+            const audioContext = Tone.context;
+            recordingState.fadeGain.gain.setValueAtTime(1, audioContext.currentTime);
+            recordingState.fadeGain.gain.linearRampToValueAtTime(0, audioContext.currentTime + 0.05);
+        }
+
+        // Wait 50ms for audio fade out, then stop
         setTimeout(() => {
             recordingState.isRecording = false;
             if (recordingState.animationFrameId) {
@@ -1239,8 +1258,17 @@ async function stopRecording() {
             if (recordingState.mediaRecorder && recordingState.mediaRecorder.state !== 'inactive') {
                 recordingState.mediaRecorder.stop();
             }
+
+            // Disconnect and cleanup audio nodes
+            if (recordingState.fadeGain) {
+                Tone.Destination.disconnect(recordingState.fadeGain);
+                recordingState.fadeGain.disconnect();
+                recordingState.fadeGain = null;
+                recordingState.audioDestination = null;
+            }
+
             resolve();
-        }, 100); // Give canvas stream 100ms to capture final frames
+        }, 50); // Wait for 50ms fade out
     });
 }
 
