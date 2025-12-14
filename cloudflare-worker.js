@@ -115,10 +115,14 @@ export default {
             padding: 0;
             box-sizing: border-box;
         }
+        html, body {
+            min-height: 120vh;
+            width: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background-attachment: fixed;
+        }
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -127,16 +131,12 @@ export default {
             color: white;
         }
         .container {
-            background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(10px);
-            border-radius: 20px;
-            padding: 20px;
             max-width: 600px;
             width: 100%;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
         }
         h1 {
             font-size: 1.5em;
+            margin-top: 0;
             margin-bottom: 15px;
             text-align: center;
         }
@@ -147,9 +147,10 @@ export default {
             font-size: 0.9em;
         }
         video {
-            width: 100%;
+            width: 80%;
             border-radius: 12px;
-            margin-bottom: 15px;
+            margin: 0 auto 15px auto;
+            display: block;
             box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
         }
         .button-group {
@@ -161,7 +162,7 @@ export default {
             background: rgba(255, 255, 255, 0.9);
             color: #764ba2;
             border: none;
-            padding: 16px 24px;
+            padding: 14px 24px;
             border-radius: 12px;
             font-size: 16px;
             font-weight: 600;
@@ -185,6 +186,8 @@ export default {
         .share-btn {
             background: linear-gradient(135deg, #E1306C 0%, #F56040 50%, #FD8D32 100%);
             color: white;
+            max-width: 80%;
+            margin: 0 auto;
         }
         .share-btn:hover {
             background: linear-gradient(135deg, #E1306C 0%, #F56040 50%, #FD8D32 100%);
@@ -205,7 +208,7 @@ export default {
 </head>
 <body>
     <div class="container">
-        <h1>Your Geo SonNet Experience 🎵🎶</h1>
+        <h1>Your Geo SonNet Experience</h1>
 
         <video id="video" controls playsinline preload="auto">
             <source src="/raw/${filename}" type="${contentType}">
