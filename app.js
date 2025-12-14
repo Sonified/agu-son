@@ -1171,13 +1171,25 @@ async function startRecording() {
             ...destination.stream.getAudioTracks()
         ]);
 
-        // Create MediaRecorder
-        const options = {
-            mimeType: 'video/webm;codecs=vp9',
-            videoBitsPerSecond: 5000000 // 5 Mbps for good quality
-        };
+        // Create MediaRecorder - try MP4 first for iPhone support, fallback to WebM
+        let options;
+        let format = 'webm';
+
+        if (MediaRecorder.isTypeSupported('video/mp4')) {
+            options = { mimeType: 'video/mp4', videoBitsPerSecond: 5000000 };
+            format = 'mp4';
+            console.log('✓ Recording as MP4 (iPhone compatible)');
+        } else if (MediaRecorder.isTypeSupported('video/webm;codecs=vp9')) {
+            options = { mimeType: 'video/webm;codecs=vp9', videoBitsPerSecond: 5000000 };
+            format = 'webm';
+            console.log('✓ Recording as WebM VP9 (Android/Desktop only)');
+        } else {
+            options = { videoBitsPerSecond: 5000000 };
+            console.log('✓ Recording with default codec');
+        }
 
         recordingState.mediaRecorder = new MediaRecorder(combinedStream, options);
+        recordingState.format = format;
         recordingState.recordedChunks = [];
 
         recordingState.mediaRecorder.ondataavailable = (event) => {
@@ -1229,8 +1241,12 @@ async function stopRecording() {
 async function handleRecordingStop() {
     console.log('✓ Recording stopped, processing video...');
 
-    // Create blob from recorded chunks
-    const blob = new Blob(recordingState.recordedChunks, { type: 'video/webm' });
+    // Create blob from recorded chunks with correct type
+    const format = recordingState.format || 'webm';
+    const mimeType = format === 'mp4' ? 'video/mp4' : 'video/webm';
+    const blob = new Blob(recordingState.recordedChunks, { type: mimeType });
+
+    console.log(`✓ Created ${format.toUpperCase()} blob: ${blob.size} bytes`);
 
     // Update UI
     const recordBtn = document.getElementById('record-btn');
@@ -1238,11 +1254,11 @@ async function handleRecordingStop() {
     recordBtn.querySelector('.record-text').textContent = 'Record';
 
     // Upload to Cloudflare Worker
-    await uploadToCloudflare(blob);
+    await uploadToCloudflare(blob, format);
 }
 
 // Upload video to Cloudflare Worker (SO MUCH SIMPLER! 🎉)
-async function uploadToCloudflare(videoBlob) {
+async function uploadToCloudflare(videoBlob, format = 'webm') {
     try {
         // Show modal with upload status
         const modal = document.getElementById('qr-modal');
@@ -1251,9 +1267,9 @@ async function uploadToCloudflare(videoBlob) {
         document.getElementById('qr-code').innerHTML = '';
         document.getElementById('direct-link').style.display = 'none';
 
-        // Create form data
+        // Create form data with correct extension
         const formData = new FormData();
-        formData.append('video', videoBlob, `geosonnet_${Date.now()}.webm`);
+        formData.append('video', videoBlob, `geosonnet_${Date.now()}.${format}`);
 
         // Upload to Cloudflare Worker
         const response = await fetch(UPLOAD_CONFIG.workerUrl, {
