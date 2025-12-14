@@ -686,6 +686,9 @@ async function toggleRunning() {
             startBtn.textContent = 'Stop';
             startBtn.classList.add('active');
             status.textContent = 'Running - Move to create music!';
+
+            // Show record button
+            document.getElementById('record-btn').style.display = 'flex';
             
                 // Start Tone.js audio context
                 await Tone.start();
@@ -717,7 +720,10 @@ async function toggleRunning() {
         startBtn.classList.remove('active');
         // Keep 'moved' class so button stays in lower right
         status.textContent = 'Stopped';
-        
+
+        // Hide record button
+        document.getElementById('record-btn').style.display = 'none';
+
         console.log('✓ Camera stopped');
     }
 }
@@ -1008,10 +1014,404 @@ function hexToRgba(hex, alpha) {
     return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
 
+// ============================================================================
+// VIDEO RECORDING MODULE
+// ============================================================================
+
+// Google Drive API Configuration
+const GOOGLE_CONFIG = {
+    clientId: 'YOUR_CLIENT_ID_HERE.apps.googleusercontent.com', // Replace with your actual client ID
+    apiKey: 'YOUR_API_KEY_HERE', // Replace with your actual API key
+    discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'],
+    scopes: 'https://www.googleapis.com/auth/drive.file'
+};
+
+// Recording state
+const recordingState = {
+    isRecording: false,
+    mediaRecorder: null,
+    recordedChunks: [],
+    recordingCanvas: null,
+    recordingCtx: null,
+    animationFrameId: null,
+    startTime: null,
+    fadeInDuration: 200, // ms
+    fadeOutDuration: 200, // ms
+    isGoogleInitialized: false,
+    accessToken: null
+};
+
+// Initialize Google API
+function initGoogleAPI() {
+    return new Promise((resolve, reject) => {
+        if (recordingState.isGoogleInitialized) {
+            resolve();
+            return;
+        }
+
+        gapi.load('client', async () => {
+            try {
+                await gapi.client.init({
+                    apiKey: GOOGLE_CONFIG.apiKey,
+                    discoveryDocs: GOOGLE_CONFIG.discoveryDocs
+                });
+                recordingState.isGoogleInitialized = true;
+                console.log('✓ Google API initialized');
+                resolve();
+            } catch (error) {
+                console.error('Error initializing Google API:', error);
+                reject(error);
+            }
+        });
+    });
+}
+
+// Handle Google Sign-In
+function handleGoogleSignIn() {
+    const client = google.accounts.oauth2.initTokenClient({
+        client_id: GOOGLE_CONFIG.clientId,
+        scope: GOOGLE_CONFIG.scopes,
+        callback: (response) => {
+            if (response.access_token) {
+                recordingState.accessToken = response.access_token;
+                gapi.client.setToken({ access_token: response.access_token });
+                console.log('✓ Google Drive connected');
+            }
+        }
+    });
+    client.requestAccessToken();
+}
+
+// Create social media ready canvas with overlay
+function createSocialMediaCanvas(sourceCanvas) {
+    const finalCanvas = document.createElement('canvas');
+    const finalCtx = finalCanvas.getContext('2d');
+
+    // Social media friendly dimensions (1080x1920 for Reels/TikTok/Stories - 9:16 aspect ratio)
+    finalCanvas.width = 1080;
+    finalCanvas.height = 1920;
+
+    // Layout dimensions
+    const topBannerHeight = 420;
+    const bottomBannerHeight = 420;
+    const videoSize = 1080; // Square video (full width)
+    const videoY = topBannerHeight;
+
+    // Fill background with gradient
+    const gradient = finalCtx.createLinearGradient(0, 0, 0, finalCanvas.height);
+    gradient.addColorStop(0, '#667eea');
+    gradient.addColorStop(1, '#764ba2');
+    finalCtx.fillStyle = gradient;
+    finalCtx.fillRect(0, 0, finalCanvas.width, finalCanvas.height);
+
+    // Draw the source canvas (grid + video) - square in the middle
+    finalCtx.drawImage(sourceCanvas, 0, videoY, videoSize, videoSize);
+
+    // === TOP BANNER ===
+    finalCtx.fillStyle = 'white';
+    finalCtx.textAlign = 'center';
+    finalCtx.textBaseline = 'middle';
+    finalCtx.shadowColor = 'rgba(0, 0, 0, 0.8)';
+    finalCtx.shadowBlur = 15;
+
+    // Top banner text (split into two lines)
+    finalCtx.font = 'bold 56px sans-serif';
+    finalCtx.fillText('I was sonified by', finalCanvas.width / 2, topBannerHeight / 2 - 40);
+    finalCtx.fillText('Geo SonNet at AGU2025', finalCanvas.width / 2, topBannerHeight / 2 + 40);
+
+    // === BOTTOM BANNER ===
+    const bottomBannerY = videoY + videoSize;
+
+    // Bottom banner text
+    finalCtx.font = 'bold 48px sans-serif';
+    finalCtx.fillText('Check out geosonnet.org', finalCanvas.width / 2, bottomBannerY + bottomBannerHeight / 2);
+
+    // TODO: Add logos here when provided
+    // Top banner: Add logos on left/right of text or above text
+    // Bottom banner: Add logos if needed
+    // Example:
+    // const logo = new Image();
+    // logo.src = 'geosonnet-logo.png';
+    // finalCtx.drawImage(logo, x, y, width, height);
+
+    return finalCanvas;
+}
+
+// Draw recording frame with fade effect
+function drawRecordingFrame() {
+    if (!recordingState.isRecording) return;
+
+    const ctx = recordingState.recordingCtx;
+    const canvas = recordingState.recordingCanvas;
+    const elapsed = Date.now() - recordingState.startTime;
+
+    // Clear canvas
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Create social media overlay canvas
+    const socialCanvas = createSocialMediaCanvas(state.gridCanvas);
+
+    // Calculate fade opacity
+    let opacity = 1;
+    if (elapsed < recordingState.fadeInDuration) {
+        // Fade in
+        opacity = elapsed / recordingState.fadeInDuration;
+    }
+
+    // Draw with opacity
+    ctx.globalAlpha = opacity;
+    ctx.drawImage(socialCanvas, 0, 0);
+    ctx.globalAlpha = 1;
+
+    // Continue animation
+    recordingState.animationFrameId = requestAnimationFrame(drawRecordingFrame);
+}
+
+// Start recording
+async function startRecording() {
+    try {
+        // Setup recording canvas (9:16 aspect ratio for Reels)
+        recordingState.recordingCanvas = document.getElementById('recording-canvas');
+        recordingState.recordingCtx = recordingState.recordingCanvas.getContext('2d');
+        recordingState.recordingCanvas.width = 1080;
+        recordingState.recordingCanvas.height = 1920;
+
+        // Get canvas stream
+        const canvasStream = recordingState.recordingCanvas.captureStream(30); // 30 fps
+
+        // Get audio from Tone.js destination
+        const audioContext = Tone.context;
+        const destination = audioContext.createMediaStreamDestination();
+        Tone.Destination.connect(destination);
+
+        // Combine video and audio streams
+        const combinedStream = new MediaStream([
+            ...canvasStream.getVideoTracks(),
+            ...destination.stream.getAudioTracks()
+        ]);
+
+        // Create MediaRecorder
+        const options = {
+            mimeType: 'video/webm;codecs=vp9',
+            videoBitsPerSecond: 5000000 // 5 Mbps for good quality
+        };
+
+        recordingState.mediaRecorder = new MediaRecorder(combinedStream, options);
+        recordingState.recordedChunks = [];
+
+        recordingState.mediaRecorder.ondataavailable = (event) => {
+            if (event.data.size > 0) {
+                recordingState.recordedChunks.push(event.data);
+            }
+        };
+
+        recordingState.mediaRecorder.onstop = handleRecordingStop;
+
+        // Start recording
+        recordingState.mediaRecorder.start(100); // Collect data every 100ms
+        recordingState.isRecording = true;
+        recordingState.startTime = Date.now();
+
+        // Start drawing animation
+        drawRecordingFrame();
+
+        // Update UI
+        const recordBtn = document.getElementById('record-btn');
+        recordBtn.classList.add('recording');
+        recordBtn.querySelector('.record-text').textContent = 'Stop Recording';
+
+        console.log('✓ Recording started');
+    } catch (error) {
+        console.error('Error starting recording:', error);
+        alert('Failed to start recording. Please try again.');
+    }
+}
+
+// Apply fade out and stop recording
+async function stopRecording() {
+    return new Promise((resolve) => {
+        const fadeOutStart = Date.now();
+        const fadeOutDuration = recordingState.fadeOutDuration;
+
+        // Animate fade out
+        function fadeOut() {
+            const elapsed = Date.now() - fadeOutStart;
+            const opacity = 1 - (elapsed / fadeOutDuration);
+
+            if (opacity > 0) {
+                recordingState.recordingCtx.clearRect(0, 0, recordingState.recordingCanvas.width, recordingState.recordingCanvas.height);
+                const socialCanvas = createSocialMediaCanvas(state.gridCanvas);
+                recordingState.recordingCtx.globalAlpha = opacity;
+                recordingState.recordingCtx.drawImage(socialCanvas, 0, 0);
+                recordingState.recordingCtx.globalAlpha = 1;
+                requestAnimationFrame(fadeOut);
+            } else {
+                // Fade complete, stop recording
+                recordingState.isRecording = false;
+                if (recordingState.animationFrameId) {
+                    cancelAnimationFrame(recordingState.animationFrameId);
+                }
+                if (recordingState.mediaRecorder && recordingState.mediaRecorder.state !== 'inactive') {
+                    recordingState.mediaRecorder.stop();
+                }
+                resolve();
+            }
+        }
+
+        fadeOut();
+    });
+}
+
+// Handle recording stop
+async function handleRecordingStop() {
+    console.log('✓ Recording stopped, processing video...');
+
+    // Create blob from recorded chunks
+    const blob = new Blob(recordingState.recordedChunks, { type: 'video/webm' });
+
+    // Update UI
+    const recordBtn = document.getElementById('record-btn');
+    recordBtn.classList.remove('recording');
+    recordBtn.querySelector('.record-text').textContent = 'Record';
+
+    // Upload to Google Drive
+    await uploadToGoogleDrive(blob);
+}
+
+// Upload video to Google Drive
+async function uploadToGoogleDrive(videoBlob) {
+    try {
+        // Show modal with upload status
+        const modal = document.getElementById('qr-modal');
+        modal.classList.add('show');
+        document.getElementById('upload-status').textContent = 'Uploading to Google Drive...';
+        document.getElementById('qr-code').innerHTML = '';
+        document.getElementById('direct-link').style.display = 'none';
+
+        // Check if we have access token, if not, request sign-in
+        if (!recordingState.accessToken) {
+            document.getElementById('upload-status').textContent = 'Please sign in to Google Drive...';
+            handleGoogleSignIn();
+            // Wait for sign-in (this is async, so we'll need to retry or show a message)
+            setTimeout(() => uploadToGoogleDrive(videoBlob), 2000);
+            return;
+        }
+
+        // Create file metadata
+        const metadata = {
+            name: `GeoSonNet_${Date.now()}.webm`,
+            mimeType: 'video/webm'
+        };
+
+        // Create form data
+        const formData = new FormData();
+        formData.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
+        formData.append('file', videoBlob);
+
+        // Upload to Google Drive
+        const response = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${recordingState.accessToken}`
+            },
+            body: formData
+        });
+
+        if (!response.ok) {
+            throw new Error('Upload failed');
+        }
+
+        const file = await response.json();
+        console.log('✓ File uploaded:', file.id);
+
+        // Make file publicly accessible
+        await fetch(`https://www.googleapis.com/drive/v3/files/${file.id}/permissions`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${recordingState.accessToken}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                role: 'reader',
+                type: 'anyone'
+            })
+        });
+
+        // Generate shareable link
+        const shareableLink = `https://drive.google.com/file/d/${file.id}/view`;
+
+        // Generate QR code
+        document.getElementById('upload-status').textContent = 'Upload complete! 🎉';
+        document.getElementById('qr-code').innerHTML = '';
+        new QRCode(document.getElementById('qr-code'), {
+            text: shareableLink,
+            width: 256,
+            height: 256
+        });
+
+        // Show direct link
+        const directLink = document.getElementById('direct-link');
+        directLink.href = shareableLink;
+        directLink.style.display = 'block';
+
+        console.log('✓ QR code generated');
+    } catch (error) {
+        console.error('Error uploading to Google Drive:', error);
+        document.getElementById('upload-status').textContent = '❌ Upload failed. Please try again.';
+
+        // Fallback: offer local download
+        const url = URL.createObjectURL(videoBlob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `GeoSonNet_${Date.now()}.webm`;
+        document.getElementById('upload-status').innerHTML = `
+            Upload failed. <a href="#" id="download-local">Click here to download locally instead</a>
+        `;
+        document.getElementById('download-local').addEventListener('click', (e) => {
+            e.preventDefault();
+            a.click();
+        });
+    }
+}
+
+// Setup recording controls
+function setupRecordingControls() {
+    const recordBtn = document.getElementById('record-btn');
+    const closeModal = document.getElementById('close-modal');
+
+    recordBtn.addEventListener('click', async () => {
+        if (!recordingState.isRecording) {
+            await startRecording();
+        } else {
+            await stopRecording();
+        }
+    });
+
+    closeModal.addEventListener('click', () => {
+        const modal = document.getElementById('qr-modal');
+        modal.classList.remove('show');
+    });
+
+    // Initialize Google API when page loads
+    window.addEventListener('load', () => {
+        initGoogleAPI().catch(err => {
+            console.warn('Google API initialization failed:', err);
+        });
+    });
+}
+
+// ============================================================================
+// END VIDEO RECORDING MODULE
+// ============================================================================
+
 // Initialize when DOM is ready
 if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', init);
+    document.addEventListener('DOMContentLoaded', () => {
+        init();
+        setupRecordingControls();
+    });
 } else {
     init();
+    setupRecordingControls();
 }
 

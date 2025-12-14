@@ -181,12 +181,39 @@
     <div id="canvas-container" class="fullwidth">
         <button id="start-btn">Start</button>
         <div id="starting-message">Starting camera<span class="dots"></span></div>
+        <button id="record-btn" class="recording-controls" style="display: none;">
+            <span class="record-icon"></span>
+            <span class="record-text">Record</span>
+        </button>
         <video id="video" autoplay playsinline></video>
         <canvas id="motion-canvas"></canvas>
         <canvas id="grid-canvas"></canvas>
+        <canvas id="recording-canvas" style="display: none;"></canvas>
+    </div>
+
+    <!-- QR Code Modal -->
+    <div id="qr-modal" class="modal">
+        <div class="modal-content">
+            <h2>Your Geo SonNet Experience! 🎵</h2>
+            <p>Scan the QR code to download your video:</p>
+            <div id="qr-code"></div>
+            <div id="upload-status">Uploading to Google Drive...</div>
+            <a id="direct-link" href="#" target="_blank" style="display: none;">Or click here for direct link</a>
+            <button id="close-modal">Done</button>
+        </div>
+    </div>
+
+    <!-- Google Sign-In Button (hidden initially) -->
+    <div id="google-signin-container" style="display: none;">
+        <div id="google-signin-btn"></div>
     </div>
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+    <!-- Google API for Drive integration -->
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <script src="https://apis.google.com/js/api.js" async defer></script>
+    <!-- QR Code generation library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="app.js"></script>
 </body>
 </html>
