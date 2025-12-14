@@ -1233,15 +1233,17 @@ async function stopRecording() {
                 recordingState.recordingCtx.globalAlpha = 1;
                 requestAnimationFrame(fadeOut);
             } else {
-                // Fade complete, stop recording
-                recordingState.isRecording = false;
-                if (recordingState.animationFrameId) {
-                    cancelAnimationFrame(recordingState.animationFrameId);
-                }
-                if (recordingState.mediaRecorder && recordingState.mediaRecorder.state !== 'inactive') {
-                    recordingState.mediaRecorder.stop();
-                }
-                resolve();
+                // Fade complete - wait a bit for canvas stream to capture final frames
+                setTimeout(() => {
+                    recordingState.isRecording = false;
+                    if (recordingState.animationFrameId) {
+                        cancelAnimationFrame(recordingState.animationFrameId);
+                    }
+                    if (recordingState.mediaRecorder && recordingState.mediaRecorder.state !== 'inactive') {
+                        recordingState.mediaRecorder.stop();
+                    }
+                    resolve();
+                }, 100); // Give canvas stream 100ms to capture fade-out frames
             }
         }
 
