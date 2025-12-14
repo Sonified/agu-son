@@ -1230,7 +1230,7 @@ async function startRecording() {
         // Update UI
         const recordBtn = document.getElementById('record-btn');
         recordBtn.classList.add('recording');
-        recordBtn.querySelector('.record-text').textContent = 'Stop Recording';
+        recordBtn.querySelector('.record-text').textContent = 'Stop Recording (R)';
 
         console.log('✓ Recording started');
     } catch (error) {
@@ -1286,7 +1286,7 @@ async function handleRecordingStop() {
     // Update UI
     const recordBtn = document.getElementById('record-btn');
     recordBtn.classList.remove('recording');
-    recordBtn.querySelector('.record-text').textContent = 'Record';
+    recordBtn.querySelector('.record-text').textContent = 'Record (R)';
 
     // Upload to Cloudflare Worker
     await uploadToCloudflare(blob, format);
@@ -1300,7 +1300,6 @@ async function uploadToCloudflare(videoBlob, format = 'webm') {
         modal.classList.add('show');
         document.getElementById('upload-status').textContent = 'Preparing video...';
         document.getElementById('qr-code').innerHTML = '';
-        document.getElementById('direct-link').style.display = 'none';
 
         // Create form data with correct extension
         const formData = new FormData();
@@ -1337,18 +1336,13 @@ async function uploadToCloudflare(videoBlob, format = 'webm') {
             setupMobileShareModal(landingPageUrl, downloadUrl);
         } else {
             // On desktop: show QR code modal
-            document.getElementById('upload-status').textContent = 'Your recording is ready to share 🎉';
+            document.getElementById('upload-status').style.display = 'none';
             document.getElementById('qr-code').innerHTML = '';
             new QRCode(document.getElementById('qr-code'), {
                 text: landingPageUrl,
                 width: 256,
                 height: 256
             });
-
-            // Show direct link to landing page
-            const directLink = document.getElementById('direct-link');
-            directLink.href = landingPageUrl;
-            directLink.style.display = 'block';
 
             // Setup desktop share buttons
             setupDesktopShareButtons(downloadUrl, landingPageUrl, result.filename);
@@ -1381,9 +1375,9 @@ function setupDesktopShareButtons(downloadUrl, landingPageUrl, filename) {
     shareButtons.style.display = 'flex';
 
     const platforms = [
-        { name: 'Facebook', icon: '📘', url: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(landingPageUrl)}` },
-        { name: 'X (Twitter)', icon: '✖️', url: `https://twitter.com/intent/tweet?url=${encodeURIComponent(landingPageUrl)}&text=Check%20out%20my%20movement%20sonification%20from%20AGU%202025!` },
-        { name: 'LinkedIn', icon: '💼', url: `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(landingPageUrl)}` },
+        // { name: 'Facebook', icon: '📘', url: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(landingPageUrl)}` },
+        // { name: 'X (Twitter)', icon: '✖️', url: `https://twitter.com/intent/tweet?url=${encodeURIComponent(landingPageUrl)}&text=Check%20out%20my%20movement%20sonification%20from%20AGU%202025!` },
+        // { name: 'LinkedIn', icon: '💼', url: `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(landingPageUrl)}` },
         { name: 'Download', icon: '⬇️', url: downloadUrl, download: true }
     ];
 
@@ -1463,6 +1457,30 @@ function setupRecordingControls() {
     closeModal.addEventListener('click', () => {
         const modal = document.getElementById('qr-modal');
         modal.classList.remove('show');
+    });
+
+    // Click outside to close QR modal
+    const qrModal = document.getElementById('qr-modal');
+    qrModal.addEventListener('click', (e) => {
+        if (e.target === qrModal) {
+            qrModal.classList.remove('show');
+        }
+    });
+
+    // Keyboard shortcut: R key to start/stop recording
+    document.addEventListener('keydown', async (e) => {
+        if (e.key === 'r' || e.key === 'R') {
+            // Don't trigger if user is typing in an input field
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
+                return;
+            }
+            e.preventDefault();
+            if (!recordingState.isRecording) {
+                await startRecording();
+            } else {
+                await stopRecording();
+            }
+        }
     });
 
     // Preload logos when page loads
