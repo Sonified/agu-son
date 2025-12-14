@@ -1171,9 +1171,9 @@ async function startRecording() {
             ...destination.stream.getAudioTracks()
         ]);
 
-        // Create MediaRecorder with VP8 for better mobile compatibility
+        // Create MediaRecorder
         const options = {
-            mimeType: 'video/webm;codecs=vp8,opus',
+            mimeType: 'video/webm;codecs=vp9',
             videoBitsPerSecond: 5000000 // 5 Mbps for good quality
         };
 
