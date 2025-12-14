@@ -1166,8 +1166,8 @@ async function startRecording() {
         recordingState.startTime = Date.now();
         drawRecordingFrame();
 
-        // Wait 50ms for streams to initialize and sync
-        await new Promise(resolve => setTimeout(resolve, 50));
+        // Wait 100ms for streams to initialize and sync
+        await new Promise(resolve => setTimeout(resolve, 100));
 
         // Get canvas stream after sync buffer
         const canvasStream = recordingState.recordingCanvas.captureStream(30); // 30 fps
@@ -1327,24 +1327,34 @@ async function uploadToCloudflare(videoBlob, format = 'webm') {
         // Generate landing page URL for mobile sharing
         const workerUrl = new URL(result.url).origin;
         const landingPageUrl = `${workerUrl}/video/${result.filename}`;
+        const downloadUrl = `${workerUrl}/download/${result.filename}`;
 
-        document.getElementById('upload-status').textContent = 'Your recording is ready to share 🎉';
-        document.getElementById('qr-code').innerHTML = '';
-        new QRCode(document.getElementById('qr-code'), {
-            text: landingPageUrl,
-            width: 256,
-            height: 256
-        });
+        // Detect if user is on mobile
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
-        // Show direct link to landing page
-        const directLink = document.getElementById('direct-link');
-        directLink.href = landingPageUrl;
-        directLink.style.display = 'block';
+        if (isMobile) {
+            // On mobile: show mobile share modal with overlay
+            setupMobileShareModal(landingPageUrl, downloadUrl);
+        } else {
+            // On desktop: show QR code modal
+            document.getElementById('upload-status').textContent = 'Your recording is ready to share 🎉';
+            document.getElementById('qr-code').innerHTML = '';
+            new QRCode(document.getElementById('qr-code'), {
+                text: landingPageUrl,
+                width: 256,
+                height: 256
+            });
 
-        // Setup desktop share buttons
-        setupDesktopShareButtons(result.url, landingPageUrl);
+            // Show direct link to landing page
+            const directLink = document.getElementById('direct-link');
+            directLink.href = landingPageUrl;
+            directLink.style.display = 'block';
 
-        console.log('✓ QR code generated');
+            // Setup desktop share buttons
+            setupDesktopShareButtons(downloadUrl, landingPageUrl, result.filename);
+
+            console.log('✓ QR code generated');
+        }
     } catch (error) {
         console.error('Error uploading video:', error);
         document.getElementById('upload-status').textContent = '❌ Upload failed. Please try again.';
@@ -1365,7 +1375,7 @@ async function uploadToCloudflare(videoBlob, format = 'webm') {
 }
 
 // Setup desktop share buttons
-function setupDesktopShareButtons(videoUrl, landingPageUrl) {
+function setupDesktopShareButtons(downloadUrl, landingPageUrl, filename) {
     const shareButtons = document.getElementById('share-buttons');
     shareButtons.innerHTML = '';
     shareButtons.style.display = 'flex';
@@ -1374,7 +1384,7 @@ function setupDesktopShareButtons(videoUrl, landingPageUrl) {
         { name: 'Facebook', icon: '📘', url: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(landingPageUrl)}` },
         { name: 'X (Twitter)', icon: '✖️', url: `https://twitter.com/intent/tweet?url=${encodeURIComponent(landingPageUrl)}&text=Check%20out%20my%20movement%20sonification%20from%20AGU%202025!` },
         { name: 'LinkedIn', icon: '💼', url: `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(landingPageUrl)}` },
-        { name: 'Download', icon: '⬇️', url: videoUrl, download: true }
+        { name: 'Download', icon: '⬇️', url: downloadUrl, download: true }
     ];
 
     platforms.forEach(platform => {
@@ -1383,10 +1393,57 @@ function setupDesktopShareButtons(videoUrl, landingPageUrl) {
         btn.target = '_blank';
         btn.className = 'share-platform-btn';
         if (platform.download) {
-            btn.download = `GeoSonNet_${Date.now()}.webm`;
+            btn.download = filename;
         }
         btn.innerHTML = `${platform.icon} ${platform.name}`;
         shareButtons.appendChild(btn);
+    });
+}
+
+// Setup mobile share modal
+function setupMobileShareModal(landingPageUrl, downloadUrl) {
+    const modal = document.getElementById('mobile-share-modal');
+    const closeBtn = document.getElementById('close-mobile-modal');
+    const statusDiv = document.getElementById('mobile-share-status');
+    const buttonsDiv = document.getElementById('mobile-share-buttons');
+
+    // Clear the QR modal
+    document.getElementById('qr-modal').classList.remove('show');
+
+    // Show mobile modal
+    modal.classList.add('show');
+    statusDiv.textContent = 'Share your Geo SonNet experience! 🎉';
+    buttonsDiv.innerHTML = '';
+
+    // Share button (Web Share API handles both sharing AND downloading)
+    const shareBtn = document.createElement('button');
+    shareBtn.className = 'mobile-share-btn';
+    shareBtn.innerHTML = '📱 Share / Download this video!';
+    shareBtn.addEventListener('click', async () => {
+        try {
+            await navigator.share({
+                title: 'My Geo SonNet Experience at AGU 2025',
+                text: 'Check out my movement sonification!',
+                url: landingPageUrl
+            });
+        } catch (err) {
+            if (err.name !== 'AbortError') {
+                console.error('Error sharing:', err);
+            }
+        }
+    });
+    buttonsDiv.appendChild(shareBtn);
+
+    // Close button handler
+    closeBtn.addEventListener('click', () => {
+        modal.classList.remove('show');
+    });
+
+    // Click outside to close
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            modal.classList.remove('show');
+        }
     });
 }
 

@@ -89,6 +89,26 @@ export default {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Your Geo SonNet Experience ✨</title>
+
+    <!-- Open Graph / Social Media Meta Tags -->
+    <meta property="og:title" content="My Geo SonNet Experience at AGU 2025 🎵">
+    <meta property="og:description" content="Watch my movement sonification created at AGU 2025!">
+    <meta property="og:type" content="video.other">
+    <meta property="og:url" content="${url.origin}/video/${filename}">
+    <meta property="og:video" content="${url.origin}/raw/${filename}">
+    <meta property="og:video:secure_url" content="${url.origin}/raw/${filename}">
+    <meta property="og:video:type" content="${contentType}">
+    <meta property="og:video:width" content="1080">
+    <meta property="og:video:height" content="1080">
+
+    <!-- Twitter Card Meta Tags -->
+    <meta name="twitter:card" content="player">
+    <meta name="twitter:title" content="My Geo SonNet Experience at AGU 2025 🎵">
+    <meta name="twitter:description" content="Watch my movement sonification created at AGU 2025!">
+    <meta name="twitter:player" content="${url.origin}/raw/${filename}">
+    <meta name="twitter:player:width" content="1080">
+    <meta name="twitter:player:height" content="1080">
+
     <style>
         * {
             margin: 0;
