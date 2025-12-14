@@ -1492,6 +1492,10 @@ function setupRecordingControls() {
     // Keyboard shortcut: R key to start/stop recording
     document.addEventListener('keydown', async (e) => {
         if (e.key === 'r' || e.key === 'R') {
+            // Don't trigger if using Command+R or Ctrl+R (browser refresh)
+            if (e.metaKey || e.ctrlKey) {
+                return;
+            }
             // Don't trigger if user is typing in an input field
             if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
                 return;
