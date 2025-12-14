@@ -1230,7 +1230,8 @@ async function startRecording() {
         // Update UI
         const recordBtn = document.getElementById('record-btn');
         recordBtn.classList.add('recording');
-        recordBtn.querySelector('.record-text').textContent = 'Stop Recording (R)';
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        recordBtn.querySelector('.record-text').textContent = isMobile ? 'Stop Recording' : 'Stop Recording (R)';
 
         console.log('✓ Recording started');
     } catch (error) {
@@ -1286,7 +1287,8 @@ async function handleRecordingStop() {
     // Update UI
     const recordBtn = document.getElementById('record-btn');
     recordBtn.classList.remove('recording');
-    recordBtn.querySelector('.record-text').textContent = 'Record (R)';
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    recordBtn.querySelector('.record-text').textContent = isMobile ? 'Record' : 'Record (R)';
 
     // Upload to Cloudflare Worker
     await uploadToCloudflare(blob, format);
@@ -1333,7 +1335,7 @@ async function uploadToCloudflare(videoBlob, format = 'webm') {
 
         if (isMobile) {
             // On mobile: show mobile share modal with overlay
-            setupMobileShareModal(landingPageUrl, downloadUrl);
+            setupMobileShareModal(downloadUrl);
         } else {
             // On desktop: show QR code modal
             document.getElementById('upload-status').style.display = 'none';
@@ -1395,7 +1397,7 @@ function setupDesktopShareButtons(downloadUrl, landingPageUrl, filename) {
 }
 
 // Setup mobile share modal
-function setupMobileShareModal(landingPageUrl, downloadUrl) {
+function setupMobileShareModal(downloadUrl) {
     const modal = document.getElementById('mobile-share-modal');
     const closeBtn = document.getElementById('close-mobile-modal');
     const statusDiv = document.getElementById('mobile-share-status');
@@ -1415,14 +1417,30 @@ function setupMobileShareModal(landingPageUrl, downloadUrl) {
     shareBtn.innerHTML = '📱 Share / Download this video!';
     shareBtn.addEventListener('click', async () => {
         try {
+            // Fetch the video file from the download URL
+            statusDiv.textContent = 'Preparing video...';
+            const response = await fetch(downloadUrl);
+            const blob = await response.blob();
+
+            // Determine file extension from URL
+            const filename = downloadUrl.split('/').pop();
+
+            // Create a File object from the blob
+            const file = new File([blob], filename, { type: blob.type });
+
+            // Share the actual video file
             await navigator.share({
                 title: 'My Geo SonNet Experience at AGU 2025',
                 text: 'Check out my movement sonification!',
-                url: landingPageUrl
+                files: [file]
             });
+
+            statusDiv.textContent = 'Share your Geo SonNet experience! 🎉';
         } catch (err) {
+            statusDiv.textContent = 'Share your Geo SonNet experience! 🎉';
             if (err.name !== 'AbortError') {
                 console.error('Error sharing:', err);
+                alert('Failed to share video. Your browser may not support video sharing.');
             }
         }
     });
@@ -1445,6 +1463,10 @@ function setupMobileShareModal(landingPageUrl, downloadUrl) {
 function setupRecordingControls() {
     const recordBtn = document.getElementById('record-btn');
     const closeModal = document.getElementById('close-modal');
+
+    // Set initial button text based on device
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    recordBtn.querySelector('.record-text').textContent = isMobile ? 'Record' : 'Record (R)';
 
     recordBtn.addEventListener('click', async () => {
         if (!recordingState.isRecording) {

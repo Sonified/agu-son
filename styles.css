@@ -779,6 +779,14 @@ select option {
         bottom: 70px;
         left: 50%;
         transform: translateX(-50%);
+        padding: 12px 32px;
+        white-space: nowrap;
+    }
+
+    #starting-message {
+        text-align: center;
+        width: 90%;
+        max-width: 300px;
     }
 }
 

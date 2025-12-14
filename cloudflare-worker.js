@@ -130,26 +130,26 @@ export default {
             background: rgba(255, 255, 255, 0.1);
             backdrop-filter: blur(10px);
             border-radius: 20px;
-            padding: 30px;
+            padding: 20px;
             max-width: 600px;
             width: 100%;
             box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
         }
         h1 {
-            font-size: 2em;
-            margin-bottom: 10px;
+            font-size: 1.5em;
+            margin-bottom: 15px;
             text-align: center;
         }
         .subtitle {
             text-align: center;
             opacity: 0.9;
-            margin-bottom: 25px;
+            margin-bottom: 15px;
             font-size: 0.9em;
         }
         video {
             width: 100%;
             border-radius: 12px;
-            margin-bottom: 20px;
+            margin-bottom: 15px;
             box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
         }
         .button-group {
@@ -191,7 +191,7 @@ export default {
             filter: brightness(1.1);
         }
         .footer {
-            margin-top: 25px;
+            margin-top: 15px;
             text-align: center;
             font-size: 0.85em;
             opacity: 0.8;
@@ -205,8 +205,7 @@ export default {
 </head>
 <body>
     <div class="container">
-        <h1>Your Geo SonNet Experience ✨</h1>
-        <p class="subtitle">Movement. Sound. Magic.</p>
+        <h1>Your Geo SonNet Experience 🎵🎶</h1>
 
         <video id="video" controls playsinline preload="auto">
             <source src="/raw/${filename}" type="${contentType}">
@@ -215,19 +214,12 @@ export default {
 
         <div class="button-group">
             <button class="share-btn" id="share-btn">
-                <span>📱</span>
-                <span>Share or download this video!</span>
+                <span>Share / Download Video</span>
             </button>
-
-            <a href="/download/${filename}" class="download-btn">
-                <span>⬇️</span>
-                <span>Download Video File</span>
-            </a>
         </div>
 
         <div class="footer">
-            💡 <strong>Tip:</strong> Long-press the video above to save directly to Photos!<br><br>
-            Created at <a href="https://geosonnet.now.audio" target="_blank">Geo SonNet</a><br>
+            Check out <a href="https://geosonnet.org" target="_blank">Geo SonNet</a><br>
             AGU 2025 • Washington, DC
         </div>
     </div>
