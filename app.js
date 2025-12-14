@@ -1139,13 +1139,13 @@ function createSocialMediaCanvas(sourceCanvas) {
     finalCtx.font = 'bold 48px sans-serif';
     finalCtx.fillText('Check out geosonnet.org', finalCanvas.width / 2, bottomBannerY + bottomBannerHeight / 2);
 
-    // Add Geo SonNet logo to top banner if loaded
+    // Add Geo SonNet logo to top banner (right side) if loaded
     if (recordingState.geosonnetLogo && recordingState.geosonnetLogo.complete) {
         finalCtx.shadowBlur = 0; // Remove shadow for logo
         const logoHeight = 150;
         const logoWidth = (recordingState.geosonnetLogo.width / recordingState.geosonnetLogo.height) * logoHeight;
-        const logoX = (finalCanvas.width - logoWidth) / 2;
-        const logoY = 250; // Below the text in top banner
+        const logoX = finalCanvas.width - logoWidth - 40; // 40px padding from right edge
+        const logoY = 50; // Near top of banner
         finalCtx.drawImage(recordingState.geosonnetLogo, logoX, logoY, logoWidth, logoHeight);
     }
 
