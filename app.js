@@ -1157,7 +1157,21 @@ async function startRecording() {
         recordingState.recordingCanvas.width = 1080;
         recordingState.recordingCanvas.height = 1920;
 
-        // Get canvas stream
+        // Start drawing animation FIRST to ensure canvas has content
+        recordingState.isRecording = true;
+        recordingState.startTime = Date.now();
+
+        // Draw first frame immediately
+        const socialCanvas = createSocialMediaCanvas(state.gridCanvas);
+        recordingState.recordingCtx.drawImage(socialCanvas, 0, 0);
+
+        // Start draw loop
+        drawRecordingFrame();
+
+        // Wait a bit for the draw loop to stabilize
+        await new Promise(resolve => setTimeout(resolve, 100));
+
+        // Get canvas stream AFTER canvas has content
         const canvasStream = recordingState.recordingCanvas.captureStream(30); // 30 fps
 
         // Get audio from Tone.js destination
@@ -1202,11 +1216,6 @@ async function startRecording() {
 
         // Start recording
         recordingState.mediaRecorder.start(100); // Collect data every 100ms
-        recordingState.isRecording = true;
-        recordingState.startTime = Date.now();
-
-        // Start drawing animation
-        drawRecordingFrame();
 
         // Update UI
         const recordBtn = document.getElementById('record-btn');
