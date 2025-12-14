@@ -1020,9 +1020,7 @@ function hexToRgba(hex, alpha) {
 
 // Cloudflare Worker Configuration
 const UPLOAD_CONFIG = {
-    workerUrl: 'https://YOUR-WORKER.YOUR-SUBDOMAIN.workers.dev', // Replace with your Cloudflare Worker URL
-    // Or use a custom domain:
-    // workerUrl: 'https://upload.geosonnet.org'
+    workerUrl: 'https://geosonnet-video-upload.robertalexander-music.workers.dev'
 };
 
 // Recording state
