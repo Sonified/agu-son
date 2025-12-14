@@ -32,12 +32,9 @@ export default {
         // You'll need to bind an R2 bucket named 'VIDEOS' in wrangler.toml
         await env.VIDEOS.put(filename, videoFile);
 
-        // Generate public URL
-        // Option 1: Use R2 public bucket URL (if you enable public access)
-        const publicUrl = `https://your-r2-public-domain.com/${filename}`;
-
-        // Option 2: Use a custom domain with worker serving the file
-        // const publicUrl = `https://videos.geosonnet.org/${filename}`;
+        // Generate URL - worker will serve the video (R2 bucket stays PRIVATE!)
+        const workerUrl = new URL(request.url).origin;
+        const publicUrl = `${workerUrl}/${filename}`;
 
         return new Response(JSON.stringify({
           success: true,
