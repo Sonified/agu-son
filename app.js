@@ -1101,9 +1101,9 @@ function createSocialMediaCanvas(sourceCanvas) {
     // === BOTTOM BANNER ===
     const bottomBannerY = videoY + videoSize;
 
-    // Bottom banner text
+    // Bottom banner text - moved up, closer to video
     finalCtx.font = 'bold 48px sans-serif';
-    finalCtx.fillText('Check out geosonnet.org', finalCanvas.width / 2, bottomBannerY + bottomBannerHeight / 2);
+    finalCtx.fillText('Check out geosonnet.org', finalCanvas.width / 2, bottomBannerY + 100);
 
     // Add Geo SonNet logo to top banner (centered below text) if loaded
     if (recordingState.geosonnetLogo && recordingState.geosonnetLogo.complete) {
@@ -1115,13 +1115,13 @@ function createSocialMediaCanvas(sourceCanvas) {
         finalCtx.drawImage(recordingState.geosonnetLogo, logoX, logoY, logoWidth, logoHeight);
     }
 
-    // Add AGU 2025 logo to bottom banner if loaded
+    // Add AGU 2025 logo to bottom banner - centered below text
     if (recordingState.aguLogo && recordingState.aguLogo.complete) {
         finalCtx.shadowBlur = 0; // Remove shadow for logo
         const logoHeight = 120;
         const logoWidth = (recordingState.aguLogo.width / recordingState.aguLogo.height) * logoHeight;
-        const logoX = (finalCanvas.width - logoWidth) / 2;
-        const logoY = bottomBannerY + bottomBannerHeight - logoHeight - 40; // 40px padding from bottom
+        const logoX = (finalCanvas.width - logoWidth) / 2; // Centered horizontally
+        const logoY = bottomBannerY + 180; // Positioned below text with spacing
         finalCtx.drawImage(recordingState.aguLogo, logoX, logoY, logoWidth, logoHeight);
     }
 
@@ -1298,7 +1298,7 @@ async function uploadToCloudflare(videoBlob, format = 'webm') {
         // Show modal with upload status
         const modal = document.getElementById('qr-modal');
         modal.classList.add('show');
-        document.getElementById('upload-status').textContent = 'Uploading video...';
+        document.getElementById('upload-status').textContent = 'Preparing video...';
         document.getElementById('qr-code').innerHTML = '';
         document.getElementById('direct-link').style.display = 'none';
 

@@ -196,16 +196,17 @@ export default {
         <div class="button-group">
             <button class="share-btn" id="share-btn">
                 <span>📱</span>
-                <span>Share this video!</span>
+                <span>Share or download this video!</span>
             </button>
 
             <a href="/download/${filename}" class="download-btn">
                 <span>⬇️</span>
-                <span>Download to Phone</span>
+                <span>Download Video File</span>
             </a>
         </div>
 
         <div class="footer">
+            💡 <strong>Tip:</strong> Long-press the video above to save directly to Photos!<br><br>
             Created at <a href="https://geosonnet.now.audio" target="_blank">Geo SonNet</a><br>
             AGU 2025 • Washington, DC
         </div>
@@ -245,7 +246,7 @@ export default {
                     await navigator.clipboard.writeText(window.location.href);
                     alert('Link copied to clipboard! Paste it into your favorite social media app.');
                 } catch (clipboardError) {
-                    alert('To share: long-press the video and select "Share" or "Save Video"');
+                    alert('To save to Photos: long-press the video above and select "Save Video"');
                 }
             }
         });
