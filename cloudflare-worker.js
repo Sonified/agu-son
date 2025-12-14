@@ -116,7 +116,7 @@ export default {
             box-sizing: border-box;
         }
         html, body {
-            min-height: 120vh;
+            min-height: 100vh;
             width: 100%;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             background-attachment: fixed;
