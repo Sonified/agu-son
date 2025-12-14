@@ -1073,7 +1073,13 @@ function createSocialMediaCanvas(sourceCanvas) {
     finalCtx.fillStyle = gradient;
     finalCtx.fillRect(0, 0, finalCanvas.width, finalCanvas.height);
 
-    // Draw the source canvas (grid + video) - square in the middle
+    // Draw the webcam video first (with opacity)
+    const videoOpacity = parseInt(document.getElementById('video-opacity').value) / 100;
+    finalCtx.globalAlpha = videoOpacity;
+    finalCtx.drawImage(state.video, 0, videoY, videoSize, videoSize);
+    finalCtx.globalAlpha = 1;
+
+    // Draw the grid canvas on top (the visualizations)
     finalCtx.drawImage(sourceCanvas, 0, videoY, videoSize, videoSize);
 
     // === TOP BANNER ===
