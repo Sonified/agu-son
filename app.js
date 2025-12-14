@@ -1057,22 +1057,21 @@ async function loadFFmpeg() {
 
     try {
         const { FFmpeg } = FFmpegWASM;
-        const { toBlobURL } = FFmpegUtil;
 
         recordingState.ffmpeg = new FFmpeg();
 
-        // Load FFmpeg core
-        const baseURL = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.4/dist/umd';
+        // Load FFmpeg core - use direct URLs (works on localhost)
+        const baseURL = 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/esm';
         await recordingState.ffmpeg.load({
-            coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript'),
-            wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm')
+            coreURL: `${baseURL}/ffmpeg-core.js`,
+            wasmURL: `${baseURL}/ffmpeg-core.wasm`
         });
 
         recordingState.ffmpegLoaded = true;
         console.log('✓ FFmpeg loaded (MP4 conversion ready - will convert AFTER recording stops)');
     } catch (error) {
-        console.warn('⚠ FFmpeg failed to load (CORS on localhost). Will work when deployed!');
-        console.error(error);
+        console.error('Failed to load FFmpeg:', error);
+        console.warn('⚠ FFmpeg unavailable - will fall back to WebM download');
     }
 }
 
@@ -1083,11 +1082,11 @@ async function convertToMP4(webmBlob) {
             await loadFFmpeg();
         }
 
-        const { fetchFile } = FFmpegUtil;
         const ffmpeg = recordingState.ffmpeg;
 
         // Write input file
-        await ffmpeg.writeFile('input.webm', await fetchFile(webmBlob));
+        const inputData = new Uint8Array(await webmBlob.arrayBuffer());
+        await ffmpeg.writeFile('input.webm', inputData);
 
         // Convert to MP4 with H.264 encoding
         // -c:v libx264 = H.264 video codec
@@ -1105,8 +1104,8 @@ async function convertToMP4(webmBlob) {
         ]);
 
         // Read the output file
-        const data = await ffmpeg.readFile('output.mp4');
-        const mp4Blob = new Blob([data.buffer], { type: 'video/mp4' });
+        const outputData = await ffmpeg.readFile('output.mp4');
+        const mp4Blob = new Blob([outputData.buffer], { type: 'video/mp4' });
 
         // Cleanup
         await ffmpeg.deleteFile('input.webm');
