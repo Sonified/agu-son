@@ -1157,10 +1157,10 @@ function createSocialMediaCanvas(sourceCanvas) {
     finalCtx.shadowColor = 'rgba(0, 0, 0, 0.8)';
     finalCtx.shadowBlur = 15;
 
-    // Top banner text (split into two lines)
+    // Top banner text (split into two lines) - positioned higher
     finalCtx.font = 'bold 56px sans-serif';
-    finalCtx.fillText('I was sonified by', finalCanvas.width / 2, topBannerHeight / 2 - 40);
-    finalCtx.fillText('Geo SonNet at AGU2025', finalCanvas.width / 2, topBannerHeight / 2 + 40);
+    finalCtx.fillText('I was sonified by', finalCanvas.width / 2, 80);
+    finalCtx.fillText('Geo SonNet at AGU2025', finalCanvas.width / 2, 160);
 
     // === BOTTOM BANNER ===
     const bottomBannerY = videoY + videoSize;
@@ -1175,7 +1175,7 @@ function createSocialMediaCanvas(sourceCanvas) {
         const logoHeight = 140;
         const logoWidth = (recordingState.geosonnetLogo.width / recordingState.geosonnetLogo.height) * logoHeight;
         const logoX = (finalCanvas.width - logoWidth) / 2; // Centered
-        const logoY = 260; // Below the text, nicely positioned in remaining space
+        const logoY = 280; // Below the text, nicely positioned in remaining space
         finalCtx.drawImage(recordingState.geosonnetLogo, logoX, logoY, logoWidth, logoHeight);
     }
 
