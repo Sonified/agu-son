@@ -245,7 +245,7 @@ export default {
                 if (navigator.share && navigator.canShare({ files: [file] })) {
                     await navigator.share({
                         title: 'My Geo SonNet Experience',
-                        text: 'Check out my movement sonification from AGU 2025! 🎵✨',
+                        text: 'I was sonified at AGU! 🎶✨ Check out geosonnet.org/agu2025',
                         files: [file]
                     });
                     console.log('✓ Shared successfully!');

@@ -1431,7 +1431,7 @@ function setupMobileShareModal(downloadUrl) {
             // Share the actual video file
             await navigator.share({
                 title: 'My Geo SonNet Experience at AGU 2025',
-                text: 'Check out my movement sonification!',
+                text: 'I was sonified at AGU! 🎶✨ Check out geosonnet.org/agu2025',
                 files: [file]
             });
 
